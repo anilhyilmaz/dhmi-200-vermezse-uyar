@@ -4,11 +4,13 @@ import 'dart:ui';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dhmigov/listofurls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'addurlpage.dart';
 import 'notifications.dart';
 
 
@@ -16,6 +18,8 @@ var codeList = [];
 var timeList = [];
 bool isActive = true;
 var url = 'https://www.dhmi.gov.tr';
+
+
 
 
 myclass() async {
@@ -108,7 +112,7 @@ void onStart(ServiceInstance service) async {
   });
 
   // bring to foreground
-  Timer.periodic(const Duration(seconds: 10), (timer) async {
+  Timer.periodic(const Duration(minutes: 1), (timer) async {
     final hello = preferences.getString("hello");
     print(hello);
 
@@ -196,41 +200,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   String text = "Stop Service";
-  TextEditingController urlcontroller = TextEditingController();
-  Widget UrlInputWidget(){return TextField(
-  obscureText: false,
-      controller: urlcontroller,
-  decoration: InputDecoration(
-  border: OutlineInputBorder(),
-  labelText: 'url',
-  ));}
-  Widget EkleUrlButton(){
-    return OutlinedButton(
-      onPressed: () {
-        debugPrint('Received click ${urlcontroller.text}');
-
-      },
-      child: const Text('Url Ekle'),
-    );
-  }
 
   int _selectedIndex = 0;
   static const TextStyle optionStyle =
   TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static const List<Widget> _widgetOptions = <Widget>[
-    Text(
-      'Index 0: Home',
-      style: optionStyle,
-    ),
-    Text(
-      'Index 1: Business',
-      style: optionStyle,
-    ),
-    Text(
-      'Index 2: School',
-      style: optionStyle,
-    ),
-  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -250,20 +223,7 @@ class _MyAppState extends State<MyApp> {
           children: [
             SizedBox(height: 30),
             Text(_selectedIndex.toString()),
-            UrlInputWidget(),
-          EkleUrlButton(),
-            ElevatedButton(
-              child: const Text("Foreground Mode"),
-              onPressed: () {
-                FlutterBackgroundService().invoke("setAsForeground");
-              },
-            ),
-            ElevatedButton(
-              child: const Text("Background Mode"),
-              onPressed: () {
-                FlutterBackgroundService().invoke("setAsBackground");
-              },
-            ),
+            _selectedIndex == 0 ? listofurls() : AddUrlPage(),
             ElevatedButton(
               child: Text(text),
               onPressed: () async {
@@ -292,12 +252,8 @@ class _MyAppState extends State<MyApp> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.business),
-              label: 'Business',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.school),
-              label: 'School',
+              icon: Icon(Icons.add),
+              label: 'Url ekle',
             ),
           ],
           currentIndex: _selectedIndex,
