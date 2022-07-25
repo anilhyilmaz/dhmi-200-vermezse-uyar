@@ -1,8 +1,8 @@
 import 'package:dhmigov/urldbhelper.dart';
 
 class Url {
-  late int id;
-  late String url;
+  int? id;
+  String? url;
 
   Url(this.id, this.url);
 

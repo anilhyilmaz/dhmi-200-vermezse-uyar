@@ -12,13 +12,12 @@ class DatabaseHelper{
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-  late Database _database;
+  static Database? _database;
 
 
-  Future<Database> get database async{
+  Future get database async{
     if(_database!=null) return _database;
-    _database = await _initDatabase();
-    return _database;
+    return _database ??= await _initDatabase();
   }
 
   _initDatabase() async{
@@ -61,6 +60,7 @@ class DatabaseHelper{
     Database db = await instance.database;
     return Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM $table'));
   }
+
 
 
 

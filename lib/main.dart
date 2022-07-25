@@ -5,22 +5,20 @@ import 'dart:ui';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dhmigov/listofurls.dart';
+import 'package:dhmigov/urldbhelper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'addurlpage.dart';
 import 'notifications.dart';
-
+import 'url.dart';
 
 var codeList = [];
 var timeList = [];
 bool isActive = true;
 var url = 'https://www.dhmi.gov.tr';
-
-
-
+List<Url> urls = [];
 
 myclass() async {
   DateTime now = DateTime.now();
@@ -86,13 +84,11 @@ bool onIosBackground(ServiceInstance service) {
 }
 
 void onStart(ServiceInstance service) async {
-
   // Only available for flutter 3.0.0 and later
   DartPluginRegistrant.ensureInitialized();
 
   // For flutter prior to version 3.0.0
   // We have to register the plugin manually
-
 
   SharedPreferences preferences = await SharedPreferences.getInstance();
   await preferences.setString("hello", "world");
@@ -157,110 +153,171 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final dbHelper = DatabaseHelper.instance;
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  TextEditingController urlController = new TextEditingController();
+
+  // void _showMessageInScaffold(String message){
+  //   _scaffoldKey.currentState.showSnackBar(SnackBar(content: Text(message),));
+  // }
+
   @override
   void initState() {
     super.initState();
     AwesomeNotifications().isNotificationAllowed().then((isAllowed) => {
-      if (!isAllowed)
-        {
-          showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Allow Notifications'),
-                content: const Text(
-                    'Our app would like to send you notifications'),
-                actions: [
-                  TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'Dont\'t Allow',
-                        style:
-                        TextStyle(color: Colors.grey, fontSize: 18),
-                      )),
-                  TextButton(
-                      onPressed: () => AwesomeNotifications()
-                          .requestPermissionToSendNotifications()
-                          .then((_) => Navigator.pop(context)),
-                      child: const Text(
-                        'Allow',
-                        style: TextStyle(
-                            color: Colors.teal,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
+          if (!isAllowed)
+            {
+              showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                        title: const Text('Allow Notifications'),
+                        content: const Text(
+                            'Our app would like to send you notifications'),
+                        actions: [
+                          TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: const Text(
+                                'Dont\'t Allow',
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 18),
+                              )),
+                          TextButton(
+                              onPressed: () => AwesomeNotifications()
+                                  .requestPermissionToSendNotifications()
+                                  .then((_) => Navigator.pop(context)),
+                              child: const Text(
+                                'Allow',
+                                style: TextStyle(
+                                    color: Colors.teal,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ))
+                        ],
                       ))
-                ],
-              ))
-        }
-    });
+            }
+        });
     // TODO: implement initState
     print('periodic task başlıyor');
     print('fff');
+    _queryAll();
   }
 
   String text = "Stop Service";
 
-  int _selectedIndex = 0;
   static const TextStyle optionStyle =
-  TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
+      TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Service App'),
-        ),
-        body: Column(
-          children: [
-            SizedBox(height: 30),
-            Text(_selectedIndex.toString()),
-            _selectedIndex == 0 ? listofurls() : AddUrlPage(),
-            ElevatedButton(
-              child: Text(text),
-              onPressed: () async {
-                final service = FlutterBackgroundService();
-                var isRunning = await service.isRunning();
-                if (isRunning) {
-                  service.invoke("stopService");
-                } else {
-                  service.startService();
-                }
-
-                if (!isRunning) {
-                  text = 'Stop Service';
-                } else {
-                  text = 'Start Service';
-                }
-                setState(() {});
-              },
+      home: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text('DHMİ'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(
+                  text: 'Insert',
+                ),
+                Tab(
+                  text: 'View',
+                )
+              ],
             ),
-          ],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.add),
-              label: 'Url ekle',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: Colors.amber[800],
-          onTap: _onItemTapped,
+          ),
+          body: TabBarView(
+            children: [
+              Center(
+                  child: Column(
+                children: [
+                  Container(
+                      padding: EdgeInsets.all(20),
+                      child: TextField(
+                        controller: urlController,
+                        decoration: InputDecoration(
+                            border: OutlineInputBorder(), labelText: 'Urls'),
+                      )),
+                  RaisedButton(
+                    onPressed: () {
+                      String controllerurl = urlController.text;
+                      _insert(controllerurl);
+                    },
+                    child: Text('Insert Car Details'),
+                  ),
+                ],
+              )),
+              Container(
+                  child: ListView.builder(
+                      itemCount: urls.length + 1,
+                      itemBuilder: (BuildContext context, int index) {
+                        if (index == urls.length) {
+                          return RaisedButton(
+                              child: Text('Refresh'),
+                              onPressed: () => setState(() {
+                                    _queryAll();
+                                  }));
+                        } else {
+                          return Container(
+                            height: 40,
+                            child: Center(
+                              child: Text(
+                                '[${urls[index].id}] ${urls[index].url}',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
+                          );
+                        }
+                      })),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  void _insert(String controllerurl) async {
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnUrl: controllerurl,
+    };
+    Url url = Url.fromMap(row);
+    final id = await dbHelper.insert(url);
+  }
+
+  void _queryAll() async {
+    final AllRows = await dbHelper.queryAllRows();
+    urls.clear();
+    AllRows.forEach((row) {
+      urls.add(Url.fromMap(row));
+    });
+    setState(() {});
+  }
 }
+
+//scaffold column main.dart
+// Column(
+// children: [
+// SizedBox(height: 30),
+// ElevatedButton(
+// child: Text(text),
+// onPressed: () async {
+// final service = FlutterBackgroundService();
+// var isRunning = await service.isRunning();
+// if (isRunning) {
+// service.invoke("stopService");
+// } else {
+// service.startService();
+// }
+//
+// if (!isRunning) {
+// text = 'Stop Service';
+// } else {
+// text = 'Start Service';
+// }
+// setState(() {});
+// },
+// ),
+// ],
+// ),
