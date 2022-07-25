@@ -1,6 +1,6 @@
 import 'package:awesome_notifications/awesome_notifications.dart';
 
-Future<void> createNotifications() async {
+Future<void> createNotifications(String url) async {
   DateTime now = DateTime.now();
   var time = now.hour.toString() +
       ":" +
@@ -14,7 +14,7 @@ Future<void> createNotifications() async {
         channelKey: 'basic_channel',
         title: 'DHMİ',
         body:
-        'Siteye ulaşılamıyor, $time',
+        '$url Siteye ulaşılamıyor, $time',
         criticalAlert: true,
       ),actionButtons: [NotificationActionButton(key: 'MARK_DONE', label: 'pingi durdur')]);
 }

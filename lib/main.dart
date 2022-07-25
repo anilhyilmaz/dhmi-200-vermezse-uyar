@@ -4,7 +4,6 @@ import 'dart:ui';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:dhmigov/listofurls.dart';
 import 'package:dhmigov/urldbhelper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -14,22 +13,40 @@ import 'package:http/http.dart' as http;
 import 'notifications.dart';
 import 'url.dart';
 
-var codeList = [];
-var timeList = [];
-bool isActive = true;
 var url = 'https://www.dhmi.gov.tr';
-List<Url> urls = [];
+List urls = [];
+List isActiveList = [];
+var lastStatusCode;
+final dbHelper = DatabaseHelper.instance;
+TextEditingController urlController = new TextEditingController();
+var lasturl;
+
+// myclass() async {
+//   final response = await http.get(Uri.parse(url));
+//   print(response.statusCode);
+//   if (response.statusCode == 200) {
+//     await createNotifications('gg');
+//   }
+// }
 
 myclass() async {
-  DateTime now = DateTime.now();
-  var time = "${now.hour}:${now.minute}:${now.second}";
-  final response = await http.get(Uri.parse(url));
-  print(response.statusCode);
-  if (response.statusCode == 200) {
-    await createNotifications();
+  if (urls.length == 0) {
+    print('liste boş');
   }
-  codeList.add(response.statusCode);
-  timeList.add(time);
+  try {
+    isActiveList = [];
+    for (int j = 0; j < urls.length; j++) {
+      lasturl = urls[j].url;
+      final response = await http.get(lasturl);
+      print(response.statusCode);
+      isActiveList.add(response.statusCode);
+      if (response.statusCode == 200) {
+        await createNotifications(lastStatusCode);
+      }
+    }
+  } catch (e) {
+    print(e.toString());
+  }
 }
 
 Future<void> main() async {
@@ -109,6 +126,15 @@ void onStart(ServiceInstance service) async {
 
   // bring to foreground
   Timer.periodic(const Duration(minutes: 1), (timer) async {
+    final AllRows = await dbHelper.queryAllRows();
+    urls.clear();
+    AllRows.forEach((row) {
+      urls.add(Url.fromMap(row));
+      for (var i = 0; i < urls.length; i++) {
+        print("${urls[i].url} ping göndermek için hazırlanıyor");
+      }
+    });
+
     final hello = preferences.getString("hello");
     print(hello);
 
@@ -153,14 +179,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final dbHelper = DatabaseHelper.instance;
-  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
-  TextEditingController urlController = new TextEditingController();
-
-  // void _showMessageInScaffold(String message){
-  //   _scaffoldKey.currentState.showSnackBar(SnackBar(content: Text(message),));
-  // }
-
   @override
   void initState() {
     super.initState();
@@ -245,7 +263,7 @@ class _MyAppState extends State<MyApp> {
                       String controllerurl = urlController.text;
                       _insert(controllerurl);
                     },
-                    child: Text('Insert Car Details'),
+                    child: Text('Insert Url'),
                   ),
                 ],
               )),
@@ -258,17 +276,21 @@ class _MyAppState extends State<MyApp> {
                               child: Text('Refresh'),
                               onPressed: () => setState(() {
                                     _queryAll();
+                                    print('güncellendi');
                                   }));
                         } else {
                           return Container(
                             height: 40,
-                            child: Center(
-                              child: Text(
-                                '[${urls[index].id}] ${urls[index].url}',
-                                style: TextStyle(fontSize: 18),
+                            child: ListTile(
+                              title: Center(
+                                child: Text(
+                                  '[${urls[index].id}] ${urls[index].url}',
+                                  style: TextStyle(fontSize: 18),
+                                ),
                               ),
-                            ),
-                          );
+                              leading: Icon(Icons.ac_unit),
+                              trailing: GestureDetector(child: Icon( Icons.close),onTap:()=>print('deleted'))
+                              ),);
                         }
                       })),
             ],
@@ -291,10 +313,30 @@ class _MyAppState extends State<MyApp> {
     urls.clear();
     AllRows.forEach((row) {
       urls.add(Url.fromMap(row));
+      for (var i = 0; i < urls.length; i++) {
+        print("${urls[i].url} ping göndermek için hazırlanıyor");
+      }
     });
     setState(() {});
   }
+  void delete(int id) async{
+    final rowdeleted = await dbHelper.delete(id);
+    print("$id silindi");
+    setState((){
+      _queryAll();
+    });
+  }
 }
+
+// Container(
+// height: 40,
+// child: Center(
+// child: Text(
+// '[${urls[index].id}] ${urls[index].url}',
+// style: TextStyle(fontSize: 18),
+// ),
+// ),
+// )
 
 //scaffold column main.dart
 // Column(
