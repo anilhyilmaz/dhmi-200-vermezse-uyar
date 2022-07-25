@@ -20,6 +20,7 @@ var lastStatusCode;
 final dbHelper = DatabaseHelper.instance;
 TextEditingController urlController = new TextEditingController();
 var lasturl;
+var lastCode;
 
 // myclass() async {
 //   final response = await http.get(Uri.parse(url));
@@ -36,12 +37,14 @@ myclass() async {
   try {
     isActiveList = [];
     for (int j = 0; j < urls.length; j++) {
-      lasturl = urls[j].url;
-      final response = await http.get(lasturl);
+      lasturl = urls[j].url.toString();
+      print(lasturl);
+      final response = await http.get(Uri.parse(lasturl));
       print(response.statusCode);
       isActiveList.add(response.statusCode);
+      print(isActiveList);
       if (response.statusCode == 200) {
-        await createNotifications(lastStatusCode);
+        await createNotifications(lasturl);
       }
     }
   } catch (e) {
