@@ -44,7 +44,14 @@ myclass() async {
       isActiveList.add(response.statusCode);
       print(isActiveList);
       if (response.statusCode == 200) {
-        await createNotifications(lasturl);
+        await Future.delayed(Duration(minutes: 1));
+        if (response.statusCode == 200) {
+          await Future.delayed(Duration(minutes: 2));
+          if (response.statusCode == 200) {
+            await Future.delayed(Duration(minutes: 3));
+            await createNotifications(lasturl);
+          }
+        }
       }
     }
   } catch (e) {
@@ -268,6 +275,25 @@ class _MyAppState extends State<MyApp> {
                     },
                     child: Text('Insert Url'),
                   ),
+                  RaisedButton(
+                    onPressed: () async {
+                      final service = FlutterBackgroundService();
+                      var isRunning = await service.isRunning();
+                      if (isRunning) {
+                        service.invoke("stopService");
+                      } else {
+                        service.startService();
+                      }
+
+                      if (!isRunning) {
+                        text = 'Stop Service';
+                      } else {
+                        text = 'Start Service';
+                      }
+                      setState(() {});
+                    },
+                    child: Text('Stop App'),
+                  ),
                 ],
               )),
               Container(
@@ -285,15 +311,17 @@ class _MyAppState extends State<MyApp> {
                           return Container(
                             height: 40,
                             child: ListTile(
-                              title: Center(
-                                child: Text(
-                                  '[${urls[index].id}] ${urls[index].url}',
-                                  style: TextStyle(fontSize: 18),
+                                title: Center(
+                                  child: Text(
+                                    '[${urls[index].id}] ${urls[index].url}',
+                                    style: TextStyle(fontSize: 18),
+                                  ),
                                 ),
-                              ),
-                              leading: Icon(Icons.ac_unit),
-                              trailing: GestureDetector(child: Icon( Icons.close),onTap:()=>print('deleted'))
-                              ),);
+                                leading: Icon(Icons.ac_unit),
+                                trailing: GestureDetector(
+                                    child: Icon(Icons.close),
+                                    onTap: () => delete(urls[index].id))),
+                          );
                         }
                       })),
             ],
@@ -322,10 +350,11 @@ class _MyAppState extends State<MyApp> {
     });
     setState(() {});
   }
-  void delete(int id) async{
+
+  void delete(int id) async {
     final rowdeleted = await dbHelper.delete(id);
     print("$id silindi");
-    setState((){
+    setState(() {
       _queryAll();
     });
   }
